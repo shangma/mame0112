@@ -10,6 +10,6 @@ This is a version of MAME 0.112 for games that use a 4-way stick for the control
 I've tested it on an iPad 2 and iPhone 4S both running iOS 5.1.
 
 Arthur Choung
-http://hamstereathamsterworld.com
-apps@hamstereathamsterworld.com
+| <http://hamstereathamsterworld.com>
+| apps@hamstereathamsterworld.com
 
