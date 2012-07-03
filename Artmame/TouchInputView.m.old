@@ -1,0 +1,199 @@
+//
+//  TouchInputView.m
+//  Artsnes9x
+//
+//  Created by arthur on 28/01/12.
+//  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
+//
+
+#import "TouchInputView.h"
+#import "RootViewController.h"
+#import "HelpView.h"
+
+#import "glue.h"
+
+extern int inputcode[];
+
+@implementation TouchInputView
+
+@synthesize helpView = _helpView;
+
+- (void)dealloc
+{
+    self.helpView = nil;
+    void (^removegr)(UISwipeGestureRecognizer **gr) = ^(UISwipeGestureRecognizer **gr) {
+        [self removeGestureRecognizer:*gr];
+        [*gr release];
+        *gr = nil;
+    };
+    removegr(&grSwipeLeft);
+    removegr(&grSwipeRight);
+    [super dealloc];
+}
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        UISwipeGestureRecognizer *(^addswipegr)(SEL selector, UISwipeGestureRecognizerDirection direction) = ^(SEL selector, UISwipeGestureRecognizerDirection direction) {
+            UISwipeGestureRecognizer *gr = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:selector];
+            gr.direction = direction;
+            [self addGestureRecognizer:gr];
+            return gr;
+        };
+        grSwipeLeft = addswipegr(@selector(handleSwipeLeft), UISwipeGestureRecognizerDirectionLeft);
+        grSwipeRight = addswipegr(@selector(handleSwipeRight), UISwipeGestureRecognizerDirectionRight);
+        
+        self.userInteractionEnabled = YES;
+        self.multipleTouchEnabled = YES;
+        self.exclusiveTouch = NO;  
+    }
+    return self;
+}
+
+- (void)handleTouchesPad:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    /*
+     A      = 0x01,
+     B      = 0x02,
+     SELECT = 0x04,
+     START  = 0x08,
+     UP     = 0x10,
+     DOWN   = 0x20,
+     LEFT   = 0x40,
+     RIGHT  = 0x80
+     */
+    inputcode[IOS_JOYCODE_1_UP] = 0;
+    inputcode[IOS_JOYCODE_1_DOWN] = 0;
+    inputcode[IOS_JOYCODE_1_LEFT] = 0;
+    inputcode[IOS_JOYCODE_1_RIGHT] = 0;
+    inputcode[IOS_JOYCODE_1_BUTTON1] = 0;
+    inputcode[IOS_JOYCODE_1_BUTTON2] = 0;
+    inputcode[IOS_KEYCODE_L] = 0;
+    inputcode[IOS_KEYCODE_K] = 0;
+    inputcode[IOS_KEYCODE_Q] = 0;
+    inputcode[IOS_KEYCODE_W] = 0;
+    inputcode[IOS_KEYCODE_R] = 0;
+    inputcode[IOS_KEYCODE_T] = 0;
+    inputcode[IOS_KEYCODE_Y] = 0;
+    inputcode[IOS_KEYCODE_U] = 0;
+    inputcode[IOS_KEYCODE_O] = 0;
+    inputcode[IOS_KEYCODE_I] = 0;
+    for (UITouch *t in event.allTouches) {
+        if (t.phase == UITouchPhaseCancelled)
+            continue;
+        if (t.phase == UITouchPhaseEnded)
+            continue;
+        CGPoint p = [t locationInView:self];
+        if (p.y < self.frame.size.height * 0.55) {
+            inputcode[IOS_JOYCODE_1_UP] = 1;
+            inputcode[IOS_KEYCODE_O] = 1;
+            if (p.x < self.frame.size.width * 0.05) {
+                inputcode[IOS_JOYCODE_1_LEFT] = 1;
+            } else if (p.x > self.frame.size.width * 0.95) {
+                inputcode[IOS_JOYCODE_1_RIGHT] = 1;
+                if (p.y < self.frame.size.height * 0.05) {
+                    if (t.phase == UITouchPhaseBegan) {
+                        if (self.helpView) {
+                            [self.helpView removeFromSuperview];
+                            self.helpView = nil;
+                        } else {
+                            self.helpView = helpForTouch(self.frame);
+                            [self addSubview:self.helpView];
+                        }
+                    }
+                }
+            }
+        } else if (p.y < self.frame.size.height * 0.95) {
+            if (p.x < self.frame.size.width * 0.05) {
+                inputcode[IOS_JOYCODE_1_LEFT] = 1;
+                inputcode[IOS_KEYCODE_K] = 1;
+            } else if (p.x < self.frame.size.width * 0.50) {
+                inputcode[IOS_JOYCODE_1_BUTTON2] = 1;
+                inputcode[IOS_KEYCODE_Q] = 1;
+            } else if (p.x < self.frame.size.width * 0.95) {
+                inputcode[IOS_JOYCODE_1_BUTTON1] = 1;
+                inputcode[IOS_KEYCODE_W] = 1;
+            } else {
+                inputcode[IOS_JOYCODE_1_RIGHT] = 1;
+                inputcode[IOS_KEYCODE_R] = 1;
+            }
+        } else {
+            inputcode[IOS_JOYCODE_1_DOWN] = 1;
+            inputcode[IOS_KEYCODE_I] = 1;
+            if (p.x < self.frame.size.width * 0.05) {
+                inputcode[IOS_JOYCODE_1_LEFT] = 1;
+            } else if (p.x > self.frame.size.width * 0.95) {
+                inputcode[IOS_JOYCODE_1_RIGHT] = 1;
+            }
+        }
+    }
+}
+
+- (void)handleTouches:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    [self handleTouchesPad:touches withEvent:event];
+}
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    [self handleTouches:touches withEvent:event];
+}
+
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+    [self handleTouches:touches withEvent:event];
+}
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
+    [self handleTouches:touches withEvent:event];
+}
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
+    [self handleTouches:touches withEvent:event];
+}
+
+- (void)handleSwipeLeft
+{
+    NSLog(@"handleSwipeLeft");
+    CGPoint p = [grSwipeLeft locationInView:self];
+    if (p.x < self.frame.size.width / 2) {
+        extern RootViewController *rootViewController;
+        [rootViewController handleReset];
+    } else {
+        NSLog(@"COIN1");
+        inputcode[IOS_KEYCODE_START1] = 15;
+    }
+}
+
+- (void)handleSwipeRight
+{
+    NSLog(@"handleSwipeRight");
+    CGPoint p = [grSwipeRight locationInView:self];
+    if (p.x < self.frame.size.width * 0.05) {
+        extern RootViewController *rootViewController;
+        [rootViewController.navigationController popViewControllerAnimated:YES];
+    } else if (p.x < self.frame.size.width / 2) {
+    } else {
+        NSLog(@"START1");
+        inputcode[IOS_KEYCODE_COIN1] = 15;
+    }
+}
+
+- (int)gestureButtons
+{
+    int val = gesture_buttons;
+    if (gesture_length > 0) {
+        gesture_length--;
+        if (!gesture_length) {
+            gesture_buttons = 0;
+        }
+    }
+    return val;
+}
+
+- (int)joypadButtons
+{
+    return touch_buttons|self.gestureButtons;
+}
+
+@end
